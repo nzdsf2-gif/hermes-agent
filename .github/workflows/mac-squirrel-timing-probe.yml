@@ -1,0 +1,29 @@
+# Temporary probe on a throwaway branch; never merged.
+name: Mac Squirrel timing probe
+
+on:
+  push:
+    branches: ['ci/mac-squirrel-timing-probe']
+
+permissions:
+  contents: read
+
+jobs:
+  time:
+    name: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, blacksmith-6vcpu-macos-15, blacksmith-12vcpu-macos-15]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+        with:
+          sparse-checkout: .github/mac-squirrel-probe
+      - name: Time v0.22.0 Squirrel.Mac on the rc.4 ZIP
+        run: bash .github/mac-squirrel-probe/run.sh 2>&1 | tee "$RUNNER_TEMP/probe.log"
+      - name: Summary
+        if: always()
+        run: |
+          { echo "### ${{ matrix.runner }}"; grep -E '^(host:|RESULT|clone version)' "$RUNNER_TEMP/probe.log" || true; } >> "$GITHUB_STEP_SUMMARY"
